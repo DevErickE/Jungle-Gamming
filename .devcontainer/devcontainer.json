@@ -1,0 +1,26 @@
+{
+  "name": "PROJETO JUNGLE GAMING",
+  "dockerComposeFile": ["../docker-compose.yml", "docker-compose.yml"],
+  "service": "app",
+  "workspaceFolder": "/workspace",
+  "remoteUser": "bun",
+  "forwardPorts": [3000],
+  "portsAttributes": {
+    "3000": { "label": "API", "onAutoForward": "notify" }
+  },
+  "postCreateCommand": "bun install && bun run db:migrate",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "oven.bun-vscode",
+        "esbenp.prettier-vscode",
+        "mhutchie.git-graph",
+        "eamodio.gitlens",
+        "humao.rest-client",
+        "redhat.vscode-yaml",
+        "christian-kohler.path-intellisense",
+        "ExodiusStudios.comment-anchors"
+      ]
+    }
+  }
+}

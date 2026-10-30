@@ -1,0 +1,39 @@
+{
+  "name": "projeto_jungle_gamming",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "start:dev": "bun --watch src/main.ts",
+    "start": "bun src/main.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "bun test",
+    "demo": "bun scripts/demo.ts",
+    "test:load": "bun scripts/load-test.ts",
+    "db:migrate": "bun scripts/migrate.ts up",
+    "db:migrate:down": "bun scripts/migrate.ts down",
+    "db:reset": "bun scripts/db-reset.ts --yes",
+    "infra:up": "docker compose up -d",
+    "infra:down": "docker compose down"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "@types/express": "^5.0.6",
+    "@types/node": "^26.6.6",
+    "@types/pg": "^8.23.1",
+    "typescript": "^7.0.2"
+  },
+  "peerDependencies": {
+    "typescript": "^7"
+  },
+  "dependencies": {
+    "@aws-sdk/client-sqs": "^3.1159.0",
+    "@nestjs/common": "^12.3.2",
+    "@nestjs/core": "^12.3.2",
+    "@nestjs/platform-express": "^12.3.2",
+    "@nestjs/swagger": "^12.0.5",
+    "pg": "^8.23.1",
+    "reflect-metadata": "^0.2.2",
+    "rxjs": "^7.8.2",
+    "typeorm": "^1.1.2"
+  }
+}

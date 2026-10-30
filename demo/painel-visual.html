@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Painel de demonstração — carteira de apostas</title>
+<style>
+  :root {
+    --bg: #f5f6f8; --card: #ffffff; --ink: #1d2330; --muted: #5d6675;
+    --line: #dde1e8; --accent: #1f6feb; --ok: #1a7f37; --bad: #b42318; --code: #eef1f6;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0f1218; --card: #171c26; --ink: #e7eaf0; --muted: #9aa3b2;
+      --line: #2a3140; --accent: #6ea8ff; --ok: #3fb950; --bad: #ff7b72; --code: #1f2633;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0f1218; --card: #171c26; --ink: #e7eaf0; --muted: #9aa3b2;
+    --line: #2a3140; --accent: #6ea8ff; --ok: #3fb950; --bad: #ff7b72; --code: #1f2633;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  main { max-width: 1100px; margin: 0 auto; padding: 24px 16px 48px; }
+  h1 { font-size: 22px; margin: 0 0 4px; }
+  h2 { font-size: 16px; margin: 0 0 12px; }
+  p.lead { color: var(--muted); margin: 0 0 20px; }
+  .grid { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 16px; }
+  .balance { font-size: 32px; font-weight: 600; margin: 4px 0; font-variant-numeric: tabular-nums; }
+  .muted { color: var(--muted); font-size: 13px; }
+  label { display: block; font-size: 13px; color: var(--muted); margin: 10px 0 4px; }
+  input, select, button { font: inherit; border-radius: 8px; border: 1px solid var(--line); padding: 8px 10px; background: var(--card); color: var(--ink); width: 100%; }
+  button { background: var(--accent); color: #fff; border: none; cursor: pointer; margin-top: 14px; font-weight: 600; }
+  button.secondary { background: transparent; color: var(--accent); border: 1px solid var(--accent); }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { text-align: left; padding: 6px 4px; border-bottom: 1px solid var(--line); font-variant-numeric: tabular-nums; }
+  td.num, th.num { text-align: right; }
+  .tag { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: 12px; font-weight: 600; }
+  .tag.ok { color: var(--ok); background: color-mix(in srgb, var(--ok) 15%, transparent); }
+  .tag.bad { color: var(--bad); background: color-mix(in srgb, var(--bad) 15%, transparent); }
+  .result { margin-top: 12px; padding: 10px; border-radius: 8px; background: var(--code); font-size: 13px; }
+  .cmd { margin-top: 12px; background: var(--code); border-radius: 8px; padding: 10px; font: 12px/1.45 ui-monospace, Consolas, monospace; white-space: pre-wrap; word-break: break-all; }
+  ol.flow { counter-reset: s; list-style: none; padding: 0; margin: 0; }
+  ol.flow li { counter-increment: s; display: grid; grid-template-columns: 28px 1fr; gap: 8px; padding: 8px 0; border-bottom: 1px solid var(--line); }
+  ol.flow li::before { content: counter(s); width: 24px; height: 24px; border-radius: 50%; background: var(--accent); color: #fff; display: grid; place-items: center; font-size: 12px; font-weight: 600; }
+  .metric { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid var(--line); font-size: 14px; }
+  .metric b { font-variant-numeric: tabular-nums; }
+  code { background: var(--code); padding: 1px 5px; border-radius: 4px; font-size: 12.5px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Carteira de apostas — painel de demonstração</h1>
+  <p class="lead">Esta tela mostra como o serviço seria usado por uma interface visual. Os números são simulados aqui no navegador. Para a demonstração real, use o terminal (<code>bun run demo</code>), que chama a API de verdade. Cada ação mostra o comando equivalente.</p>
+
+  <div class="grid">
+    <section class="card" aria-labelledby="saldo-titulo">
+      <h2 id="saldo-titulo">Carteira do jogador</h2>
+      <div class="muted">Jogador <span id="player">—</span></div>
+      <div class="balance" id="balance">R$ 0,00</div>
+      <div class="muted">Versão <span id="version">0</span> · cada movimento incrementa a versão</div>
+      <button class="secondary" id="reset">Criar carteira com R$ 100,00</button>
+      <div class="cmd" id="cmd-wallet">POST /wallets  {"initialBalance":{"amount":"100.00","currency":"BRL"}}</div>
+    </section>
+
+    <section class="card" aria-labelledby="aposta-titulo">
+      <h2 id="aposta-titulo">Nova transação</h2>
+      <label for="kind">Tipo</label>
+      <select id="kind">
+        <option value="BET">BET — aposta (débito)</option>
+        <option value="WIN">WIN — ganho (crédito)</option>
+      </select>
+      <label for="amount">Valor (R$)</label>
+      <input id="amount" type="number" min="0.01" step="0.01" value="25.00">
+      <button id="send">Enviar transação</button>
+      <div class="result" id="result">Aguardando envio.</div>
+      <div class="cmd" id="cmd-bet">POST /wagering/transactions  Idempotency-Key: provider-a:&lt;id&gt;</div>
+    </section>
+
+    <section class="card" style="grid-column: 1 / -1" aria-labelledby="extrato-titulo">
+      <h2 id="extrato-titulo">Extrato (ledger)</h2>
+      <p class="muted">Lançamentos são imutáveis. Um trigger no banco bloqueia UPDATE e DELETE nesta tabela.</p>
+      <table>
+        <thead><tr><th>Quando</th><th>Tipo</th><th class="num">Valor</th><th class="num">Antes</th><th class="num">Depois</th><th class="num">Versão</th></tr></thead>
+        <tbody id="ledger"><tr><td colspan="6" class="muted">Nenhum lançamento ainda.</td></tr></tbody>
+      </table>
+      <div class="cmd">GET /wallets/:walletId/ledger?limit=20</div>
+    </section>
+
+    <section class="card" aria-labelledby="fluxo-titulo">
+      <h2 id="fluxo-titulo">O que acontece em cada envio</h2>
+      <ol class="flow">
+        <li><span>Valida o corpo e exige <code>Idempotency-Key</code>. Valor vira centavos (bigint), nunca float.</span></li>
+        <li><span>Procura a chave de idempotência. Se já existe, devolve o resultado anterior (<code>idempotentReplay</code>).</span></li>
+        <li><span>Abre transação e trava a wallet com <code>SELECT ... FOR UPDATE</code>. Outras apostas da mesma wallet esperam.</span></li>
+        <li><span>Calcula o novo saldo. Se ficaria negativo, marca <code>REJECTED</code> (WALLET_INSUFFICIENT_FUNDS).</span></li>
+        <li><span>Grava transação, lançamento e evento na outbox na mesma transação. Tudo ou nada.</span></li>
+        <li><span>Um publicador separado lê a outbox e envia o evento para o SQS. Se falhar, tenta de novo.</span></li>
+      </ol>
+    </section>
+
+    <section class="card" aria-labelledby="saude-titulo">
+      <h2 id="saude-titulo">Saúde e métricas</h2>
+      <div class="metric"><span>Banco (PostgreSQL)</span><span class="tag ok">up</span></div>
+      <div class="metric"><span>Fila (SQS)</span><span class="tag ok">up</span></div>
+      <div class="metric"><span>Transações processadas</span><b id="m-ok">0</b></div>
+      <div class="metric"><span>Transações rejeitadas</span><b id="m-bad">0</b></div>
+      <div class="metric"><span>Respostas idempotentes</span><b id="m-dup">0</b></div>
+      <div class="cmd">GET /health/ready · GET /metrics</div>
+    </section>
+  </div>
+</main>
+
+<script>
+  const state = { walletId: null, player: null, balance: 0, version: 0, entries: [], ok: 0, bad: 0, dup: 0, keys: {}, seq: 0 };
+  const money = (cents) => 'R$ ' + (cents / 100).toFixed(2).replace('.', ',');
+  const $ = (id) => document.getElementById(id);
+
+  function render() {
+    $('player').textContent = state.player ? state.player.slice(0, 8) + '…' : '—';
+    $('balance').textContent = state.walletId ? money(state.balance) : 'R$ 0,00';
+    $('version').textContent = state.version;
+    $('m-ok').textContent = state.ok;
+    $('m-bad').textContent = state.bad;
+    $('m-dup').textContent = state.dup;
+    const rows = state.entries.slice().reverse().map((e) =>
+      '<tr><td>' + e.at + '</td><td>' + e.label + '</td><td class="num">' + money(e.amount) + '</td>' +
+      '<td class="num">' + money(e.before) + '</td><td class="num">' + money(e.after) + '</td><td class="num">' + e.version + '</td></tr>').join('');
+    $('ledger').innerHTML = rows || '<tr><td colspan="6" class="muted">Nenhum lançamento ainda.</td></tr>';
+  }
+
+  function uuid() { return crypto.randomUUID(); }
+
+  $('reset').addEventListener('click', () => {
+    Object.assign(state, { walletId: uuid(), player: uuid(), balance: 10000, version: 1, entries: [], ok: 0, bad: 0, dup: 0, keys: {} });
+    state.entries.push({ at: now(), label: 'OPENING', amount: 10000, before: 0, after: 10000, version: 1 });
+    $('result').textContent = 'Carteira criada: ' + state.walletId;
+    render();
+  });
+
+  function now() { return new Date().toLocaleTimeString('pt-BR'); }
+
+  $('send').addEventListener('click', () => {
+    if (!state.walletId) { $('result').textContent = 'Crie a carteira primeiro.'; return; }
+    const kind = $('kind').value;
+    const cents = Math.round(Number($('amount').value) * 100);
+    state.seq += 1;
+    const key = 'provider-a:demo-' + state.seq;
+    const debit = kind === 'BET';
+    const after = debit ? state.balance - cents : state.balance + cents;
+    if (debit && after < 0) {
+      state.bad += 1;
+      $('result').innerHTML = '<span class="tag bad">REJECTED</span> WALLET_INSUFFICIENT_FUNDS · HTTP 422 · saldo não muda';
+    } else {
+      state.balance = after;
+      state.version += 1;
+      state.ok += 1;
+      state.entries.push({ at: now(), label: kind, amount: cents, before: after + (debit ? cents : -cents), after, version: state.version });
+      $('result').innerHTML = '<span class="tag ok">PROCESSED</span> HTTP 200 · transactionId gerado · saldo ' + money(after);
+    }
+    $('cmd-bet').textContent = 'POST /wagering/transactions  Idempotency-Key: ' + key + '\n' +
+      JSON.stringify({ kind, money: { amount: (cents / 100).toFixed(2), currency: 'BRL' } });
+    render();
+  });
+
+  render();
+</script>
+</body>
+</html>
