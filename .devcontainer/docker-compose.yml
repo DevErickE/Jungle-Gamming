@@ -2,7 +2,9 @@
 # que já define PostgreSQL e LocalStack. Assim os serviços de infra não são duplicados.
 services:
   app:
-    image: oven/bun:1
+    build:
+      context: .
+      dockerfile: Dockerfile
     command: sleep infinity
     working_dir: /workspace
     volumes:

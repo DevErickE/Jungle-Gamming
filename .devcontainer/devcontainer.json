@@ -3,9 +3,6 @@
   "dockerComposeFile": ["../docker-compose.yml", "docker-compose.yml"],
   "service": "app",
   "workspaceFolder": "/workspace",
-  "features": {
-    "ghcr.io/devcontainers/features/git:1": {}
-  },
   "remoteUser": "bun",
   "forwardPorts": [3000],
   "portsAttributes": {
