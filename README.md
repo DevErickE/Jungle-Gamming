@@ -12,7 +12,7 @@ Serviço que recebe apostas de provedores de jogos, grava o saldo do jogador e u
 ```bash
 bun install
 cp .env.example .env
-docker compose up -d
+bun run infra:up
 bun run db:migrate
 bun run start:dev
 ```
@@ -57,8 +57,8 @@ scripts/                migrate.ts e demo.ts
 | `bun test` | Roda todos os testes. Exige o banco e o LocalStack no ar |
 | `bun test test/unit` | Roda só os testes unitários, sem banco |
 | `bun run demo` | Roda o fluxo completo contra a API e explica cada passo |
-| `docker compose up -d` | Sobe PostgreSQL e LocalStack |
-| `docker compose down` | Para PostgreSQL e LocalStack |
+| `bun run infra:up` | Sobe PostgreSQL e LocalStack (`.docker/docker-compose.dev.yml`) |
+| `bun run infra:down` | Para PostgreSQL e LocalStack |
 | `bun run db:migrate` | Aplica as migrations pendentes |
 | `bun run db:migrate:down` | Desfaz a última migration |
 | `bun run db:reset` | Apaga o schema de `DATABASE_URL`, recria e aplica as migrations. Apaga os dados |
@@ -92,9 +92,9 @@ Não grave dados com `INSERT` ou `UPDATE` direto no banco. Isso pula as regras d
 
 ## Devcontainer
 
-Com a extensão **Dev Containers** do VS Code, abra a pasta do projeto e escolha **Reopen in Container**. A configuração está em `.devcontainer/` e sobe três serviços: a aplicação (`oven/bun`), o PostgreSQL e o LocalStack. Na criação do container, o `bun install` e as migrations rodam sozinhos.
+Com a extensão **Dev Containers** do VS Code, abra a pasta do projeto e escolha **Reopen in Container**. A configuração está em `.devcontainer/devcontainer.json` e sobe três serviços definidos em `.docker/docker-compose.dev.yml`: a aplicação (`oven/bun`), o PostgreSQL e o LocalStack. Na criação do container, o `bun install` e as migrations rodam sozinhos.
 
-O devcontainer reaproveita o `docker-compose.yml` da raiz e só acrescenta o serviço da aplicação, pelo arquivo `.devcontainer/docker-compose.yml`. Por isso o PostgreSQL e o LocalStack são os mesmos nos dois modos. Não rode o `docker compose` da raiz e o devcontainer ao mesmo tempo, porque as portas 5432 e 4566 entram em conflito.
+A estrutura segue o padrão do core-back. A configuração do VS Code fica em `.devcontainer/devcontainer.json`, e o Docker fica em `.docker/`: o `Dockerfile.dev` (Bun e Git) e o `docker-compose.dev.yml` (aplicação, PostgreSQL e LocalStack). Não rode `infra:up` e o devcontainer ao mesmo tempo, porque as portas 5432 e 4566 entram em conflito.
 
 ## Variáveis de ambiente
 

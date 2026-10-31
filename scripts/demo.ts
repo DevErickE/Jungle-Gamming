@@ -61,7 +61,7 @@ async function main(): Promise<void> {
   explain('O /health/ready confirma que o PostgreSQL e o SQS (LocalStack) respondem. Se falhar, a API devolve 503.');
   const ready = await call('GET', '/health/ready');
   if (ready.status !== 200) {
-    console.log('\nAPI não está pronta. Suba com: docker compose up -d && bun run db:migrate && bun run start:dev');
+    console.log('\nAPI não está pronta. Suba com: bun run infra:up && bun run db:migrate && bun run start:dev');
     process.exit(1);
   }
 
@@ -149,7 +149,7 @@ async function main(): Promise<void> {
 
   title('Fim do demo');
   console.log(`Carteira usada: ${walletId}`);
-  console.log('Os dados ficam no banco. Para zerar, rode: docker compose down -v && docker compose up -d && bun run db:migrate');
+  console.log('Os dados ficam no banco. Para zerar, rode: bun run db:reset');
 }
 
 main().catch((error: unknown) => {

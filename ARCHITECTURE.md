@@ -297,7 +297,7 @@ Na rejeição por regra de negócio, o `failureCode` diz se foi saldo insuficien
   - `multi-process.test.ts`: três processos disputando a mesma wallet.
   - `messaging.test.ts` e `metrics.test.ts`: fila, outbox e métricas.
   - `outbox-crash.test.ts`: publicador que morre depois de enviar, em processo real.
-- **Banco:** `docker compose up -d` sobe PostgreSQL e LocalStack com o `docker-compose.yml` da raiz. O devcontainer usa o mesmo arquivo. `TEST_DATABASE_URL` aponta para o banco de teste.
+- **Banco:** `bun run infra:up` sobe PostgreSQL e LocalStack com `.docker/docker-compose.dev.yml`. O devcontainer usa o mesmo arquivo. `TEST_DATABASE_URL` aponta para o banco de teste.
 
 ### 8.1 Teste de carga (`bun run test:load`)
 
@@ -373,7 +373,7 @@ Trocar a autenticação não exige mexer nos controllers nem nos casos de uso. B
 
 ### O que falta para funcionar de verdade
 
-1. **Subir um IdP** no `docker-compose.yml`, com um realm e um cliente por provedor.
+1. **Subir um IdP** no `.docker/docker-compose.dev.yml`, com um realm e um cliente por provedor.
 2. **Criar um adaptador OIDC** que implemente `ProviderIdentityPort`:
    - ler o Bearer do header;
    - validar a assinatura do JWT com as chaves públicas do IdP (JWKS);

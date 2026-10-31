@@ -12,8 +12,8 @@
     "db:migrate": "bun scripts/migrate.ts up",
     "db:migrate:down": "bun scripts/migrate.ts down",
     "db:reset": "bun scripts/db-reset.ts --yes",
-    "infra:up": "docker compose up -d",
-    "infra:down": "docker compose down"
+    "infra:up": "docker compose -f .docker/docker-compose.dev.yml up -d",
+    "infra:down": "docker compose -f .docker/docker-compose.dev.yml down"
   },
   "devDependencies": {
     "@types/bun": "latest",

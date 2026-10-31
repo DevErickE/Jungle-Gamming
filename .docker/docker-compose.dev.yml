@@ -1,15 +1,13 @@
-# Override usado só pelo devcontainer: acrescenta a aplicação ao docker-compose.yml da raiz,
-# que já define PostgreSQL e LocalStack. Assim os serviços de infra não são duplicados.
+name: projeto_jungle_gamming
+
 services:
   app:
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.dev
     command: sleep infinity
-    working_dir: /workspace
     volumes:
-      # Caminhos relativos são resolvidos a partir da raiz do projeto (primeiro arquivo do compose).
-      - .:/workspace:cached
+      - ../:/workspace:cached
     environment:
       PORT: 3000
       DATABASE_URL: postgres://wallet:wallet@postgres:5432/wallet
@@ -26,3 +24,25 @@ services:
         condition: service_healthy
       localstack:
         condition: service_started
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: wallet
+      POSTGRES_PASSWORD: wallet
+      POSTGRES_DB: wallet
+    ports:
+      - '5432:5432'
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U wallet -d wallet']
+      interval: 2s
+      timeout: 3s
+      retries: 20
+
+  localstack:
+    image: localstack/localstack:3
+    environment:
+      SERVICES: sqs
+      AWS_DEFAULT_REGION: us-east-1
+    ports:
+      - '4566:4566'

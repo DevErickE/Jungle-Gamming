@@ -1,6 +1,6 @@
 {
   "name": "PROJETO JUNGLE GAMING",
-  "dockerComposeFile": ["../docker-compose.yml", "docker-compose.yml"],
+  "dockerComposeFile": ["../.docker/docker-compose.dev.yml"],
   "service": "app",
   "workspaceFolder": "/workspace",
   "remoteUser": "bun",
