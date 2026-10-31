@@ -62,6 +62,7 @@ scripts/                migrate.ts e demo.ts
 | `bun run db:migrate` | Aplica as migrations pendentes |
 | `bun run db:migrate:down` | Desfaz a última migration |
 | `bun run db:reset` | Apaga o schema de `DATABASE_URL`, recria e aplica as migrations. Apaga os dados |
+| `bun run test:load` | Teste de carga contra a API em execução. Mede vazão, latência e o tempo para a outbox esvaziar. Ver `ARCHITECTURE.md`, seção 8.1 |
 
 Os testes de integração usam `TEST_DATABASE_URL`, que por padrão aponta para `postgres://wallet:wallet@127.0.0.1:5432/wallet_test`. O banco de teste é recriado a cada execução, então ele nunca mistura dados com o banco de desenvolvimento.
 

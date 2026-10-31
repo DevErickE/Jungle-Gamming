@@ -313,6 +313,9 @@ Na rejeição por regra de negócio, o `failureCode` diz se foi saldo insuficien
   - `multi-process.test.ts`: três processos disputando a mesma wallet.
   - `messaging.test.ts` e `metrics.test.ts`: fila, outbox e métricas.
   - `outbox-crash.test.ts`: publicador que morre depois de enviar, em processo real.
+  - `reconciliation.test.ts`: consistência do saldo, divergência sinalizada e não corrigida.
+  - `failed-transaction.test.ts`: falha permanente de infraestrutura que vira `FAILED`.
+- **Unitários adicionais:** `auth.test.ts` cobre o ponto de extensão de autenticação (seção 10).
 - **Banco:** `bun run infra:up` sobe PostgreSQL e LocalStack com `.docker/docker-compose.dev.yml`. O devcontainer usa o mesmo arquivo. `TEST_DATABASE_URL` aponta para o banco de teste.
 
 ### 8.1 Teste de carga (`bun run test:load`)
@@ -337,7 +340,7 @@ Medição anterior, com MikroORM, na mesma máquina, para comparação: distribu
 **Interpretação:**
 
 - A carteira quente teve a mesma vazão nos dois ORMs, em torno de 122 req/s. Isso sugere que o limite não está no ORM. A hipótese mais provável é a API e o gerador de carga dividirem o mesmo computador. Não medimos isso.
-- Com TypeORM, o cenário distribuído fez o dobro da vazão da carteira quente (245 contra 125 req/s). Essa diferença é o efeito esperado do lock por wallet: as 50 requisições disputam a mesma linha quando a carteira é única. Na medição com MikroORM, essa diferença não apareceu, então as duas medições não são comparáveis entre si.
+- Com TypeORM, o cenário distribuído fez o dobro da vazão da carteira quente (245 contra 125 req/s). Uma hipótese para essa diferença é o lock por wallet: quando a carteira é única, as 50 requisições disputam a mesma linha. Não isolamos essa causa nesta medição. Na medição com MikroORM, essa diferença não apareceu, então as duas medições não são comparáveis entre si.
 - O cenário distribuído subiu de 121 para 245 req/s em relação à medição com MikroORM. Não dá para atribuir essa diferença ao TypeORM com uma execução por ORM.
 - A outbox é o gargalo medido. O publicador envia no máximo 50 eventos por segundo, porque processa um lote de 50 a cada tick de 1 segundo. Com 4.000 eventos, o esvaziamento leva cerca de 76 s. Uma melhoria seria esvaziar o lote na hora, enquanto houver eventos vencidos.
 - A latência ficou abaixo de 1 s até o p99, com 50 requisições simultâneas.
