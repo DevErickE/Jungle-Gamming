@@ -56,6 +56,23 @@ describe('métricas de processamento', () => {
     expect(metrics.value('wager_errors_total', { code: 'WALLET_NOT_FOUND' })).toBe(1);
   });
 
+  test('lock segurado por outra transação conta como disputa de lock', async () => {
+    const metrics = new Metrics();
+    const useCase = new SubmitWagerUseCase(orm, {}, metrics);
+    const wallet = await openWallet(client, { initialMinor: 10000 });
+
+    // Segura o lock da wallet numa transação aberta, para a aposta esperar de verdade.
+    await client.query('BEGIN');
+    await client.query('SELECT id FROM wallets WHERE id = $1 FOR UPDATE', [wallet.id]);
+    const pending = useCase.execute(bet(wallet.id, wallet.playerId, 'm-contend', '1.00'));
+    await Bun.sleep(300);
+    await client.query('COMMIT');
+    await pending;
+
+    expect(metrics.value('wallet_lock_contention_total')).toBe(1);
+    expect(metrics.observations('wallet_lock_wait_seconds')).toBeGreaterThanOrEqual(1);
+  });
+
   test('o publicador da outbox conta eventos publicados e mede o lag', async () => {
     const metrics = new Metrics();
     const useCase = new SubmitWagerUseCase(orm);

@@ -190,7 +190,23 @@ As regras de estado ficam em classes, não em SQL espalhado.
 - **`IntegrationEvent<T>`** (`src/domain/messaging/integration-event.ts`) é a base dos eventos. Cada subclasse define `eventType` e `version`, e `toJSON()` monta o envelope da seção 11 da spec. As subclasses estão em `wager-events.ts` e `wallet-events.ts`. A `causationId` é opcional: eventos de transações recebidas da fila levam o `messageId` da mensagem como causa. Eventos da API não têm o campo, para que o envelope não ganhe campos sem causa.
 - **`OutboxMessage` e `InboxMessage`** (`src/domain/messaging/`) guardam o backoff da outbox e o ciclo de vida da inbox. O publicador usa `OutboxMessage`, e o caso de uso usa `InboxMessage`.
 
-## 6.1 Mensageria (SQS)
+### 6.6 Idempotência e hash do payload
+
+A chave de idempotência vem do header `Idempotency-Key` na API e do campo `idempotencyKey` na fila. O banco garante que ela é única, e também que `(provider_id, external_transaction_id)` é único.
+
+O hash do payload é o SHA-256 de um JSON canônico (`canonicalJson` e `hashBusinessPayload` em `src/domain/wagering/payload-hash.ts`). As chaves são ordenadas em todos os níveis e o JSON não tem espaços. Entram no hash estes campos: `providerId`, `externalTransactionId`, `playerId`, `walletId`, `roundId`, `gameId`, `kind`, `money` (valor com 2 casas e moeda) e `referenceExternalTransactionId`, que vale `null` quando não há referência. Ficam de fora o header `Idempotency-Key`, o `messageId`, o `occurredAt` e os demais metadados de transporte. Por isso a mesma operação tem o mesmo hash, venha pela API ou pela fila.
+
+A decisão é a mesma nos dois caminhos:
+
+- mesma chave e mesmo hash: replay, com a resposta original e `idempotentReplay: true`;
+- mesma chave e hash diferente: `IDEMPOTENCY_CONFLICT`, que na API vira 409.
+
+Dois detalhes:
+
+- A mensagem da fila grava na inbox outro hash, o SHA-256 do JSON canônico do campo `data` inteiro. Esse hash só registra a mensagem. A decisão de replay usa sempre o hash de negócio acima.
+- A transação `OPENING`, da criação de wallet, tem hash próprio, calculado sobre `kind`, `walletId`, `playerId` e `money`.
+
+### 6.7 Mensageria (SQS)
 
 **Filas**, criadas no boot pelo `ensureQueues`:
 
@@ -209,7 +225,7 @@ As regras de estado ficam em classes, não em SQL espalhado.
   - **De negócio** (carteira inexistente, conflito de idempotência, moeda divergente): ack, porque a resposta é definitiva.
   - **Transitória** (conexão, serialização, deadlock) ou inesperada: a mensagem não é apagada. A visibilidade muda com backoff exponencial. No último recebimento permitido (`maxReceiveCount`), se a falha persistir, a transação é gravada como `FAILED` com o código `INFRASTRUCTURE_FAILURE`, e a mensagem vai para a DLQ. Se não der para gravar (por exemplo, o banco está fora), a mensagem segue o caminho normal e o SQS a redireciona.
 - Cada mensagem do lote é isolada. Uma falha não atrasa as outras.
-- `stop()` (SIGTERM) espera o lote em andamento terminar antes de devolver o controle.
+- `stop()` (SIGTERM) espera o lote em andamento terminar antes de devolver o controle. Nenhuma mensagem nova é recebida depois do `stop()`. O teste com `stop()` no meio de uma mensagem confirma que ela é concluída e apagada.
 
 **Publicador da outbox (`OutboxPublisher`):**
 
@@ -219,11 +235,11 @@ As regras de estado ficam em classes, não em SQL espalhado.
 
 **Readiness:** `/health/ready` testa o PostgreSQL (`SELECT 1`) e o SQS (`ListQueues`). Responde 503 se algum dos dois falhar.
 
-**Testes:** `test/integration/messaging.test.ts` roda contra o SQS real, no LocalStack, com filas próprias por teste. Cobre processamento com ack, mensagem duplicada, crash entre commit e ack, malformada indo para a DLQ, transitória até a DLQ, erro de negócio sem DLQ, ROLLBACK antes da BET, reinício no meio do lote, outbox publicada, dois publishers concorrentes e backoff de publicação.
+**Testes:** `test/integration/messaging.test.ts` roda contra o SQS real, no LocalStack, com filas próprias por teste. Cobre processamento com ack, mensagem duplicada, crash entre commit e ack, malformada indo para a DLQ, transitória até a DLQ, erro de negócio sem DLQ, ROLLBACK antes da BET, reinício no meio do lote, parada com SIGTERM no meio de uma mensagem, outbox publicada, dois publishers concorrentes e backoff de publicação.
 
 **Publicador que morre no meio:** `test/integration/outbox-crash.test.ts` usa um processo filho que envia o primeiro evento ao SQS e morre antes de confirmar a transação. O evento continua pendente. Outro publicador assume, reenvia, e a deduplicação da FIFO impede a cópia: cada evento aparece uma única vez na fila. No Windows, o `SIGKILL` sai como código de saída diferente de zero, e o teste confere isso junto com a ausência de stderr.
 
-## 6.2 Reconciliação
+### 6.8 Reconciliação
 
 `POST /wallets/:walletId/reconciliation` compara o saldo guardado com o saldo reconstruído pela soma do ledger.
 
@@ -232,7 +248,7 @@ As regras de estado ficam em classes, não em SQL espalhado.
 - **Divergência não é corrigida.** Ela é logada como `error` com identificadores e valores, conta na métrica `wallet_reconciliation_divergences_total` e aparece na resposta. Corrigir em silêncio esconderia um problema real.
 - **Teste:** `test/integration/reconciliation.test.ts` simula corrupção com um `UPDATE` direto no saldo. O ledger é imutável, mas o saldo não é protegido por trigger. O teste confere a sinalização, a métrica e que o saldo continua divergente depois da chamada.
 
-## 6.3 Métricas
+### 6.9 Métricas
 
 Expostas em `GET /metrics`, em texto no formato Prometheus. Cada processo tem as suas.
 

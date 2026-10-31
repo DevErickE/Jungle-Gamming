@@ -320,6 +320,35 @@ describe('consumidor da fila de transações (SQS real)', () => {
     expect(await debitCount(wallet.id)).toBe(20);
     await assertLedgerMatchesBalance(client, wallet.id);
   }, 60_000);
+
+  test('SIGTERM no meio de uma mensagem: stop() espera a conclusão, confirma a mensagem e não recebe outra', async () => {
+    const queues = await makeQueues();
+    const wallet = await openWallet(client, { initialMinor: 10000 });
+    let inFlight = false;
+    const consumer = new WagerConsumer(sqs, queues.queueUrl, queues.dlqUrl, useCase, {
+      waitTimeSeconds: 1,
+      beforeAck: async () => {
+        inFlight = true;
+        await Bun.sleep(1000);
+      },
+    });
+
+    await send(queues.queueUrl, wagerMessage(wallet, 'BET', 'mq-stop-1', '25.00'));
+    consumer.start();
+    const deadline = Date.now() + 10_000;
+    while (!inFlight && Date.now() < deadline) {
+      await Bun.sleep(10);
+    }
+    expect(inFlight).toBe(true);
+
+    // stop() chega enquanto a mensagem está entre o commit e o ack.
+    await consumer.stop();
+
+    expect(await statusOf('mq-stop-1')).toMatchObject({ status: 'PROCESSED' });
+    expect(await balanceOf(wallet.id)).toBe('7500');
+    expect(await receiveAll(queues.queueUrl)).toEqual([]);
+    await assertLedgerMatchesBalance(client, wallet.id);
+  }, 60_000);
 });
 
 /** Marca eventos antigos como publicados, para que cada teste da outbox conte só os seus. */
